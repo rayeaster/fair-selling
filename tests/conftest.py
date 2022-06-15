@@ -11,8 +11,16 @@ USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 USDC_WHALE = "0x0a59649758aa4d66e25f08dd01271e891fe52199"
 BADGER_WHALE = "0xd0a7a8b98957b9cd3cfb9c0425abe44551158e9e"
 CVX_WHALE = "0xcf50b810e57ac33b91dcf525c6ddd9881b139332"
+WETH_WHALE = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0"
+CRV = "0xD533a949740bb3306d119CC777fa900bA034cd52"
+WBTC = "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+WBTC_WHALE = "0x8fd589aa8bfa402156a6d1ad323fec0ecee50d9d"
 
 ## Contracts ##
+@pytest.fixture
+def swapexecutor():
+  return OnChainSwapMainnet.deploy({"from": a[0]})
+  
 @pytest.fixture
 def pricer():
   return OnChainPricingMainnet.deploy({"from": a[0]})
@@ -25,7 +33,18 @@ def seller(pricer):
 def processor(pricer):
   return VotiumBribesProcessor.deploy(pricer, {"from": a[0]})
 
-
+@pytest.fixture
+def oneE18():
+  return 1000000000000000000  
+  
+@pytest.fixture
+def wbtc():
+  return interface.ERC20(WBTC)
+  
+@pytest.fixture
+def crv():
+  return interface.ERC20(CRV)
+  
 @pytest.fixture
 def usdc():
   return interface.ERC20(USDC)
@@ -49,6 +68,14 @@ def badger_whale():
 @pytest.fixture
 def cvx_whale():
   return accounts.at(CVX_WHALE, force=True)
+  
+@pytest.fixture
+def weth_whale():
+  return accounts.at(WETH_WHALE, force=True)
+
+@pytest.fixture
+def wbtc_whale():
+  return accounts.at(WBTC_WHALE, force=True)
 
 @pytest.fixture
 def manager(seller):

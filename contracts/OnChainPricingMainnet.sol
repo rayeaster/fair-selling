@@ -8,6 +8,7 @@ import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/curve/ICurveRouter.sol";
+import "../interfaces/curve/ICurvePool.sol";
 
 /// @title OnChainPricing
 /// @author Alex the Entreprenerd @ BadgerDAO
@@ -28,11 +29,15 @@ contract OnChainPricingMainnet {
 
     // Curve / Doesn't revert on failure
     address public constant CURVE_ROUTER = 0x8e764bE4288B842791989DB5b8ec067279829809; // Curve quote and swaps
+		
+    uint256 public constant FEE_SCALE = 100000;
 
 
     struct Quote {
         string name;
         uint256 amountOut;
+        address[] pools; // specific pools involved in the optimal swap path
+        uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
     }
 
     /// @dev View function for testing the routing of the strategy
@@ -40,15 +45,26 @@ contract OnChainPricingMainnet {
         uint256 length = 3; // Add length you need
 
         Quote[] memory quotes = new Quote[](length);
+        address[] memory dummyPools;
+        uint256[] memory dummyPoolFees;
 
-        uint256 curveQuote = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[0] = Quote("curve", curveQuote);
+        (address curvePool, uint256 curveQuote) = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
+        if (curveQuote > 0){		   
+            address[] memory curvePools = new address[](1);
+            curvePools[0] = curvePool;
+            uint256[] memory curvePoolFees = new uint256[](1);
+            //https://curve.readthedocs.io/factory-pools.html?highlight=fee#StableSwap.fee
+            curvePoolFees[0] = ICurvePool(curvePool).fee() * FEE_SCALE / 1e10;
+            quotes[0] = Quote("curve", curveQuote, curvePools, curvePoolFees);		
+        }else{
+            quotes[0] = Quote("curve", curveQuote, dummyPools, dummyPoolFees);			
+        }
 
         uint256 uniQuote = getUniPrice(UNIV2_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[1] = Quote("uniV2", uniQuote);
+        quotes[1] = Quote("uniV2", uniQuote, dummyPools, dummyPoolFees);
 
         uint256 sushiQuote = getUniPrice(SUSHI_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[2] = Quote("sushi", sushiQuote);
+        quotes[2] = Quote("sushi", sushiQuote, dummyPools, dummyPoolFees);
 
 
         /// TODO: Add Balancer and UniV3
@@ -102,9 +118,9 @@ contract OnChainPricingMainnet {
 
 
     /// @dev Given the address of the CurveLike Router, the input amount, and the path, returns the quote for it
-    function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (uint256) {
-        (, uint256 curveQuote) = ICurveRouter(router).get_best_rate(tokenIn, tokenOut, amountIn);
+    function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (address, uint256) {
+        (address pool, uint256 curveQuote) = ICurveRouter(router).get_best_rate(tokenIn, tokenOut, amountIn);
 
-        return curveQuote;
+        return (pool, curveQuote);
     }
 }
