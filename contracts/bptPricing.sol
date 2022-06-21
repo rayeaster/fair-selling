@@ -1615,8 +1615,8 @@ contract BptPricing {
 	
     function calcBptPrice(uint256 relativeFairPrice, uint256 invariant, uint256 totalSupply, uint256 weight1, uint256 weight2) public pure returns(uint256, uint256, uint256){
         require(weight1.add(weight2) == 1e18, '!weights');
-        uint256 _fairBal1 = invariant.divDown(relativeFairPrice.powDown(weight2));
-        uint256 _fairBal2 = invariant.mulDown(relativeFairPrice.powDown(weight1));
+        uint256 _fairBal1 = invariant.mulDown(weight1.powDown(weight2).divDown(weight2.powDown(weight2))).divDown(relativeFairPrice.powDown(weight2));
+        uint256 _fairBal2 = invariant.mulDown(weight2.powDown(weight1).divDown(weight1.powDown(weight1))).mulDown(relativeFairPrice.powDown(weight1));
         uint256 _fairBptPrice = _fairBal2.add(_fairBal1.mulDown(relativeFairPrice)).divDown(totalSupply);
         return (_fairBptPrice, _fairBal1, _fairBal2);
     }
